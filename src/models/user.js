@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       enum: ["male", "female", "other"],
+      lowercase: true,
       message: 'Gender must be "male", "female", or "other"',
     },
     photoUrl: {

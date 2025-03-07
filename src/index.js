@@ -2,104 +2,20 @@ const express = require("express");
 const connectDB = require("./config/database");
 const app = express();
 const User = require("./models/user");
-const { validateSignUp } = require("./utils/validate");
-const bcrypt = require("bcrypt");
 const cookieParser = require("cookie-parser");
-const jwt = require("jsonwebtoken");
-const { userAuth } = require("./middlewares/auth");
 
 app.use(express.json());
 app.use(cookieParser());
 
-app.post("/signup", async (req, res) => {
-  try {
-    const validationErrors = validateSignUp(req);
+const authRouter = require("./routes/auth");
+const profileRouter = require("./routes/profile");
+const requestRouter = require("./routes/request");
+const userRouter = require("./routes/user");
 
-    if (validationErrors) {
-      return res.status(400).json({ errors: validationErrors });
-    }
-
-    // Check if the email already exists
-    const existingUser = await User.findOne({ emailId: req.body.emailId });
-    if (existingUser) {
-      return res.status(400).json({ error: "Email is already in use" });
-    }
-
-    const { firstName, lastName, emailId, gender, age, password } = req.body;
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    // Create new user instance
-    const user = new User({
-      firstName,
-      lastName,
-      emailId,
-      gender,
-      age,
-      password: passwordHash,
-    });
-
-    // Save user to database
-    await user.save();
-
-    res.status(201).json({ message: "User registered successfully" });
-  } catch (err) {
-    console.error("Error saving user:", err);
-
-    // Handle validation errors
-    if (err.name === "ValidationError") {
-      return res.status(400).json({ error: err.message });
-    }
-
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post("/login", async (req, res) => {
-  const { emailId, password } = req.body;
-
-  try {
-    const user = await User.findOne({ emailId });
-    if (!user) {
-      return res.status(404).send("Invalid credentials");
-    }
-
-    const isMatch = await user.validatePassword(password);
-    if (!isMatch) {
-      return res.status(400).send("Invalid credentials");
-    }
-    const expiresIn = 24 * 60 * 60 * 1000;
-    const token = await user.getJWT();
-    res.cookie("token", token, { expires: new Date(Date.now() + expiresIn) });
-    res.send("LogIn successfull");
-  } catch (err) {
-    console.error("Error logging in", err);
-    res.status(500).send("Internal Server Error");
-  }
-});
-
-app.get("/profile", userAuth, async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user) {
-      res.status(404).send("User not found");
-    }
-    res.send(user);
-  } catch (err) {
-    console.error("Error fetching user", err);
-    res.status(400).send("Something went wrong");
-  }
-});
-
-app.get("/feed", async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.send(users);
-  } catch (err) {
-    console.error("Error fetching user", err);
-    res.status(400).send("Something went wrong");
-  }
-});
+app.use("/",authRouter);
+app.use("/",profileRouter);
+app.use("/",requestRouter);
+app.use("/",userRouter);
 
 app.delete("/user/:id", async (req, res) => {
   const userId = req.params.id;
