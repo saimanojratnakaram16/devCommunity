@@ -67,8 +67,6 @@ router.post("/request/review/:status/:requestId", userAuth, async (req,res)=>{
             status: 'interested'
         });
 
-        console.log(connectionRequest);
-
         if(!connectionRequest){
             throw new Error("Connection request not found");
         }
